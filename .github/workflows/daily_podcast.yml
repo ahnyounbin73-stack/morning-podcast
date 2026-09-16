@@ -1,0 +1,41 @@
+name: Daily Morning Stock Podcast
+
+on:
+  schedule:
+    # 매일 한국 시간 오전 06:20 (UTC 기준 21:20) 실행
+    - cron: '20 21 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Generate Podcast Episode
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          python generate_podcast.py
+
+      - name: Commit and Push changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add episodes/ feed.xml episodes.json
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Add new daily podcast episode [$(date +'%Y-%m-%d')]" && git push)
