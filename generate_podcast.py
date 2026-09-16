@@ -59,7 +59,7 @@ def generate_podcast_script() -> str:
 5. [클로징]: 오늘 하루 투자와 안전한 출근길을 응원하는 따뜻한 마무리 멘트.
 """
     response = client.models.generate_content(
-        model="gemini-2.5-flash",
+        model="gemini-3.6-flash",
         contents=prompt,
         config=types.GenerateContentConfig(
             tools=[{"google_search": {}}],
