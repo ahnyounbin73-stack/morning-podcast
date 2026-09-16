@@ -5,9 +5,11 @@ import edge_tts
 from google import genai
 from google.genai import types
 
-REPO_NAME = os.environ.get("GITHUB_REPOSITORY", "ahnyounbin73-stack/morning-podcast")
-USER_NAME = REPO_NAME.split("/")[0]
-PROJECT_NAME = REPO_NAME.split("/")
+# ----------------------------------------------------
+# 1. 고정 주소 설정 (오타 방지 완벽 고정)
+# ----------------------------------------------------
+USER_NAME = "ahnyounbin73-stack"
+PROJECT_NAME = "morning-podcast"
 BASE_URL = f"https://{USER_NAME}.github.io/{PROJECT_NAME}"
 
 PODCAST_TITLE = "출근길 모닝 증시 라디오"
@@ -141,7 +143,7 @@ def main():
     with open("feed.xml", "w", encoding="utf-8") as f:
         f.write(feed_xml)
 
-    print("성공적으로 완료되었습니다!")
+    print("올바른 주소로 갱신 완료되었습니다!")
 
 if __name__ == "__main__":
     main()
