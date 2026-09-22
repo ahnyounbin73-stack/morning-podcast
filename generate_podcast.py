@@ -25,7 +25,7 @@ def fetch_latest_news_headlines() -> str:
     try:
         query = urllib.parse.quote("미국 증시 마감 OR 뉴욕증시 OR 코스피 OR 삼성전자")
         url = f"https://news.google.com/rss/search?q={query}&hl=ko&gl=KR&ceid=KR:ko"
-        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
         with urllib.request.urlopen(req, timeout=8) as res:
             xml_data = res.read()
         root = ET.fromstring(xml_data)
@@ -63,8 +63,8 @@ def generate_podcast_script() -> str:
         target_desc = f"어제({target_dt.strftime('%m월 %d일')})"
 
     target_date_str = target_dt.strftime("%Y년 %m월 %d일")
-
     print(f"방송일: {display_today} | 마감 기준 거래일: {target_date_str} ({target_desc})")
+    
     realtime_news = fetch_latest_news_headlines()
 
     prompt = f"""당신은 대한민국 최고의 경제 전문 라디오 진행자입니다.
@@ -79,33 +79,43 @@ def generate_podcast_script() -> str:
 4. 국내 증시 및 종목: {target_desc}인 {target_date_str} 마감한 코스피·코스닥 지수 및 삼성전자·SK하이닉스 주요 이슈, 오늘 장 개장 체크포인트
 
 [절대 금지사항]
-- 과거 몇 달 전이나 며칠 전의 오래된 지난 뉴스를 언급하지 마세요.
-- 반드시 검색 도구를 활용하여 '{target_date_str} 미국 증시 마감', '{target_date_str} 뉴욕증시', '{target_date_str} 코스피 마감'을 검색해 정확한 최신 팩트만으로 작성하세요.
+- 과거 오래된 지난 뉴스를 언급하지 마세요.
 - 제목 기호(#), 불릿포인트(*), 괄호 지문((음악), (웃음) 등), 소제목 없이 첫 문장부터 끝 문장까지 바로 낭독할 수 있는 자연스러운 구어체 대본만 출력하세요.
 - 분량: 3분~5분 분량 (약 1,200자 ~ 1,800자 내외)
 
-[최근 24시간 주요 헤드라인 참고자료]
+[최근 24시간 실제 주요 헤드라인 참고자료]
 {realtime_news}
 """
 
     models_to_try = ["gemini-3.6-pro", "gemini-3.6-flash", "gemini-2.0-flash", "gemini-1.5-pro", "gemini-1.5-flash"]
     last_err = None
+    
     for m in models_to_try:
         try:
-            print(f"시도 중: {m}")
+            print(f"-> 모델 시도 중: {m}...")
+            # 1. 실시간 검색 포함 호출 시도
             try:
                 cfg = types.GenerateContentConfig(tools=[{"google_search": {}}], temperature=0.3)
                 res = client.models.generate_content(model=m, contents=prompt, config=cfg)
-            except Exception:
-                cfg = types.GenerateContentConfig(temperature=0.3)
-                res = client.models.generate_content(model=m, contents=prompt, config=cfg)
-            if res and res.text:
-                print(f"성공: {m}")
+                if res and hasattr(res, "text") and res.text:
+                    print(f"✓ {m} (검색 포함) 대본 생성 성공!")
+                    return res.text.strip()
+            except Exception as search_e:
+                print(f"검색 포함 호출 실패 ({search_e}), 일반 텍스트 생성으로 재시도...")
+
+            # 2. 일반 텍스트 생성 호출 시도 (참고자료 헤드라인 활용)
+            cfg_plain = types.GenerateContentConfig(temperature=0.3)
+            res = client.models.generate_content(model=m, contents=prompt, config=cfg_plain)
+            if res and hasattr(res, "text") and res.text:
+                print(f"✓ {m} (헤드라인 기반) 대본 생성 성공!")
                 return res.text.strip()
+
         except Exception as e:
-            print(f"{m} 실패: {e}")
+            print(f"경고: {m} 전체 호출 실패 ({e}). 다음 후보 모델로 전환합니다.")
             last_err = e
-    raise RuntimeError(f"대본 생성 실패: {last_err}")
+            continue
+
+    raise RuntimeError(f"모든 후보 모델 호출에 실패했습니다. 마지막 오류: {last_err}")
 
 async def synthesize_speech(text: str, out_path: str):
     comm = edge_tts.Communicate(text=text, voice=VOICE_NAME, rate="+3%")
@@ -144,12 +154,12 @@ def main():
     date_str = kst.strftime("%Y-%m-%d")
     disp_date = kst.strftime("%Y년 %m월 %d일")
 
-    print(f"[{date_str}] 대본 작성 시작...")
+    print(f"[{date_str}] 1. 대본 작성 시작...")
     text = generate_podcast_script()
 
     mp3_name = f"briefing_{date_str}.mp3"
     mp3_path = EPISODES_DIR / mp3_name
-    print(f"음성 변환 시작: {mp3_name}...")
+    print(f"2. 음성 변환 시작: {mp3_name}...")
     asyncio.run(synthesize_speech(text, str(mp3_path)))
 
     audio = MP3(str(mp3_path))
