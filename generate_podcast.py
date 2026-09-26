@@ -15,7 +15,6 @@ PODCAST_DESCRIPTION = "매일 아침 미국 증시, 빅테크, 삼성전자·SK�
 PODCAST_AUTHOR = "Gemini Morning Briefing"
 PODCAST_IMAGE = f"{BASE_URL}/cover.png"
 
-# 자연스럽고 따뜻한 여성 라디오 DJ 음성
 VOICE_NAME = "ko-KR-SunHiNeural"
 
 EPISODES_DIR = Path("episodes")
@@ -23,7 +22,6 @@ EPISODES_DIR.mkdir(exist_ok=True)
 METADATA_FILE = Path("episodes.json")
 
 def fetch_latest_news_headlines() -> str:
-    """최근 24시간 실제 경제 헤드라인을 수집하여 프롬프트에 직접 주입"""
     try:
         query = urllib.parse.quote("미국 증시 마감 OR 뉴욕증시 OR 코스피 OR 삼성전자")
         url = f"https://news.google.com/rss/search?q={query}&hl=ko&gl=KR&ceid=KR:ko"
@@ -53,7 +51,6 @@ def generate_podcast_script() -> str:
     weekday_kr = ["월", "화", "수", "목", "금", "토", "일"][kst_now.weekday()]
     display_today = f"{today_str} ({weekday_kr}요일)"
 
-    # 직전 거래일 자동 계산 (주말/월요일 처리)
     if kst_now.weekday() == 0:
         target_dt = kst_now - datetime.timedelta(days=3)
         target_desc = f"지난 금요일({target_dt.strftime('%m월 %d일')})"
@@ -78,7 +75,7 @@ def generate_podcast_script() -> str:
    - '52,093.11pt'처럼 적으면 기계가 이상하게 읽습니다.
    - 반드시 '5만 2천 선으로 3백 포인트가량 내리면서', '0.6% 정도 밀리면서', '1,348원 선'처럼 사람이 실제로 말하는 자연스러운 발음 형태로 풀어 쓰세요.
 3. [자연스러운 호흡(숨소리) 유도]:
-   - 음성 합성기가 적절히 숨을 고르고 억양을 살릴 수 있도록, 문장 곳곳에 쉼표(,)를 자연스럽게 자주 넣어주세요.
+   - 문장 곳곳에 쉼표(,)를 자연스럽게 자주 넣어주세요.
    - '그런데요,', '한편,', '오늘 아침 가장 눈길을 끄는 건,', '어제 장 보신 분들은 아시겠지만,' 같은 자연스러운 연결 멘트를 넣어주세요.
 4. [금지 사항]:
    - 기호(#, *), 괄호 지문((음악), (웃음) 등), 소제목 없이 첫 문장부터 끝 문장까지 바로 읽을 수 있는 순수 본문만 작성하세요.
@@ -130,32 +127,29 @@ def generate_podcast_script() -> str:
     raise RuntimeError(f"대본 생성 실패: {last_error}")
 
 async def synthesize_speech_async(text: str, out_path: str):
-    """1순위: 자연스러운 고음질 Edge TTS 음성 합성"""
     voices = ["ko-KR-SunHiNeural", "ko-KR-InJoonNeural"]
     for v in voices:
         for attempt in range(2):
             try:
-                comm = edge_tts.Communicate(text=text, voice=v, rate="+0%")
+                comm = edge_tts.Communicate(text=text, voice=v)
                 await comm.save(out_path)
                 if os.path.exists(out_path) and os.path.getsize(out_path) > 1000:
-                    print(f"✓ 고음질 음성 생성 완료 ({v})")
+                    print(f"✓ 음성 변환 성공 ({v})")
                     return True
             except Exception as e:
-                print(f"고음질 음성 일시 지연 ({e})...")
+                print(f"음성 변환 재시도 대기 ({e})...")
                 await asyncio.sleep(2)
     return False
 
 def synthesize_speech(text: str, out_path: str):
-    """음성 합성 통합 관리: 고음질 Edge TTS 우선 + 비상시 100% 무료 구글 백업 엔진"""
     success = False
     try:
         success = asyncio.run(synthesize_speech_async(text, out_path))
     except Exception as e:
         print(f"Edge TTS 전체 실패: {e}")
 
-    # 만에 하나 Edge TTS가 모두 실패할 경우, 100% 무료 구글 백업 엔진으로 즉시 대체
     if not success or not os.path.exists(out_path) or os.path.getsize(out_path) < 1000:
-        print("-> [비상 안전망 가동] 100% 무료 구글 백업 엔진(gTTS)으로 음성 생성...")
+        print("-> [비상 안전망 가동] gTTS 음성 생성...")
         try:
             from gtts import gTTS
             tts = gTTS(text=text, lang="ko")
