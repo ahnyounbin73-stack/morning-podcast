@@ -1,7 +1,8 @@
-import os, sys, json, asyncio, datetime, email.utils, time, base64
+import os, sys, json, asyncio, datetime, email.utils, time
 import urllib.request, urllib.parse, xml.etree.ElementTree as ET
 from pathlib import Path
 from mutagen.mp3 import MP3
+import edge_tts
 from google import genai
 from google.genai import types
 
@@ -13,6 +14,7 @@ PODCAST_TITLE = "출근길 모닝 증시 라디오"
 PODCAST_DESCRIPTION = "매일 아침 미국 증시, 빅테크, 삼성전자·SK하이닉스, 환율과 금리를 깊이 있게 전해드리는 개인 전용 팟캐스트입니다."
 PODCAST_AUTHOR = "Gemini Morning Briefing"
 PODCAST_IMAGE = f"{BASE_URL}/cover.png"
+VOICE_NAME = "ko-KR-InJoonNeural"
 
 EPISODES_DIR = Path("episodes")
 EPISODES_DIR.mkdir(exist_ok=True)
@@ -97,7 +99,6 @@ def generate_podcast_script() -> str:
     for m in models_to_try:
         try:
             print(f"-> 모델 시도 중: {m}...")
-            # 1. 실시간 검색 포함 호출 시도
             try:
                 cfg = types.GenerateContentConfig(tools=[{"google_search": {}}], temperature=0.3)
                 res = client.models.generate_content(model=m, contents=prompt, config=cfg)
@@ -107,7 +108,6 @@ def generate_podcast_script() -> str:
             except Exception as search_e:
                 print(f"검색 포함 호출 실패 ({search_e}), 일반 텍스트 생성으로 재시도...")
 
-            # 2. 일반 텍스트 생성 호출 시도 (헤드라인 참고자료 활용)
             cfg_plain = types.GenerateContentConfig(temperature=0.3)
             res = client.models.generate_content(model=m, contents=prompt, config=cfg_plain)
             if res and hasattr(res, "text") and res.text and len(res.text.strip()) > 100:
@@ -121,52 +121,32 @@ def generate_podcast_script() -> str:
 
     raise RuntimeError(f"모든 후보 모델 호출에 실패했습니다. 마지막 오류: {last_error}")
 
+async def synthesize_speech_async(text: str, out_path: str):
+    """100% 무료 고음질 Edge TTS (3회 재시도 및 목소리 자동 전환 안전망)"""
+    voices = ["ko-KR-InJoonNeural", "ko-KR-SunHiNeural"]
+    for v in voices:
+        for attempt in range(3):
+            try:
+                print(f"-> 무료 음성 변환 시도 중 ({v}, 시도 {attempt+1})...")
+                comm = edge_tts.Communicate(text=text, voice=v, rate="+3%")
+                await comm.save(out_path)
+                if os.path.exists(out_path) and os.path.getsize(out_path) > 1000:
+                    print(f"✓ 음성 변환 성공! (크기: {os.path.getsize(out_path)} 바이트)")
+                    return True
+            except Exception as e:
+                print(f"음성 변환 재시도 대기 ({e})...")
+                await asyncio.sleep(3)
+    return False
+
 def synthesize_speech(text: str, out_path: str):
-    """음성 합성 통합 관리: Google Cloud 공식 TTS 우선 호출 + gTTS 자동 백업"""
-    api_key = os.environ.get("GEMINI_API_KEY")
     success = False
+    try:
+        success = asyncio.run(synthesize_speech_async(text, out_path))
+    except Exception as e:
+        print(f"음성 합성 실행 실패: {e}")
 
-    # 1. Google Cloud 공식 Text-to-Speech API 시도 (고품질 Neural2 아나운서 음성)
-    if api_key:
-        try:
-            print("-> Google Cloud 공식 TTS API 호출 중...")
-            url = f"https://texttospeech.googleapis.com/v1/text:synthesize?key={api_key}"
-            payload = {
-                "input": {"text": text},
-                "voice": {
-                    "languageCode": "ko-KR",
-                    "name": "ko-KR-Neural2-C"
-                },
-                "audioConfig": {
-                    "audioEncoding": "MP3",
-                    "speakingRate": 1.05
-                }
-            }
-            req = urllib.request.Request(
-                url,
-                data=json.dumps(payload).encode("utf-8"),
-                headers={"Content-Type": "application/json"}
-            )
-            with urllib.request.urlopen(req, timeout=30) as res:
-                data = json.loads(res.read().decode("utf-8"))
-                if "audioContent" in data:
-                    with open(out_path, "wb") as f:
-                        f.write(base64.b64decode(data["audioContent"]))
-                    print("✓ Google Cloud 공식 TTS 음성 파일 생성 완료!")
-                    success = True
-        except Exception as e:
-            print(f"Google Cloud 공식 TTS 호출 건너뜀 또는 실패: {e}")
-
-    # 2. 백업 안전망 (gTTS - 100% 무중단 안정성)
     if not success or not os.path.exists(out_path) or os.path.getsize(out_path) < 1000:
-        print("-> gTTS 안전 백업으로 음성 생성 진행...")
-        try:
-            from gtts import gTTS
-            tts = gTTS(text=text, lang="ko")
-            tts.save(out_path)
-            print("✓ gTTS 음성 파일 생성 완료!")
-        except Exception as ge:
-            raise RuntimeError(f"모든 TTS 음성 변환 실패: {ge}")
+        raise RuntimeError("음성 파일 생성에 실패했습니다. 네트워크 연결을 확인하세요.")
 
 def build_rss_xml(episodes: list) -> str:
     items = []
