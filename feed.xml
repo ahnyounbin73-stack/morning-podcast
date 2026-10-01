@@ -10,6 +10,17 @@
     <itunes:category text="Business"><itunes:category text="Investing"/></itunes:category>
     <itunes:explicit>false</itunes:explicit>
     <item>
+      <title><![CDATA[[2026년 10월 02일] 모닝 증시 브리핑]]></title>
+      <description><![CDATA[안녕하세요, 청취자 여러분. 2026년 10월 2일 금요일 아침입니다. 출근길 따뜻한 음료 한잔 손에 쥐고 계시는지요. 오늘만 차분히 잘 마무리하시면 또 즐거운 주말이 찾아오는데요, 기분 좋은 마음으로 오늘 아침 든든한 경제 이야기 바로 시작해 보겠습니다.
+
+어제 마감한 뉴욕증시는, 한마디로 미국 국채 금리 움직임에 맞춰 춤을 추듯 등락을 반복하다가, 결국...]]></description>
+      <pubDate>Thu, 01 Oct 2026 21:33:23 GMT</pubDate>
+      <enclosure url="https://ahnyounbin73-stack.github.io/morning-podcast/episodes/briefing_2026-10-02.mp3" length="1077840" type="audio/mpeg"/>
+      <guid isPermaLink="false">briefing-2026-10-02</guid>
+      <itunes:duration>2:59</itunes:duration>
+      <itunes:explicit>false</itunes:explicit>
+    </item>
+    <item>
       <title><![CDATA[[2026년 10월 01일] 모닝 증시 브리핑]]></title>
       <description><![CDATA[안녕하세요, 청취자 여러분. 10월의 첫날인 2026년 10월 1일 목요일 아침입니다. 선선해진 가을 바람 맞으면서 출근길 서두르고 계실 텐데요, 오늘 아침에도 따뜻한 차 한잔 곁들이시면서, 어제 밤사이 있었던 글로벌 경제 이야기 차근차근 함께해보시면 좋겠습니다.
 
@@ -144,15 +155,6 @@
       <enclosure url="https://ahnyounbin73-stack.github.io/morning-podcast/episodes/briefing_2026-09-17.mp3" length="1444464" type="audio/mpeg"/>
       <guid isPermaLink="false">briefing-2026-09-17</guid>
       <itunes:duration>4:00</itunes:duration>
-      <itunes:explicit>false</itunes:explicit>
-    </item>
-    <item>
-      <title><![CDATA[[2026년 09월 16일] 모닝 증시 브리핑]]></title>
-      <description><![CDATA[좋은 아침입니다. 청취자 여러분. 2026년 9월 16일 수요일 아침, 여러분의 든든한 경제 파트너가 전해드리는 모닝 증시 리포트 시작합니다. 오늘도 바쁜 출근길, 여러분의 주머니 사정을 든든하게 만들어줄 핵심 경제 뉴스만 콕 짚어 전해드리겠습니다. 오늘 밤 예정된 미국 연준의 금리 결정을 앞두고 밤사이 뉴욕 증시는 팽팽한 눈치보기 속에서도 AI 기술주들의...]]></description>
-      <pubDate>Wed, 16 Sep 2026 11:40:48 GMT</pubDate>
-      <enclosure url="https://ahnyounbin73-stack.github.io/morning-podcast/episodes/briefing_2026-09-16.mp3" length="1494720" type="audio/mpeg"/>
-      <guid isPermaLink="false">briefing-2026-09-16</guid>
-      <itunes:duration>4:09</itunes:duration>
       <itunes:explicit>false</itunes:explicit>
     </item>
   </channel>
